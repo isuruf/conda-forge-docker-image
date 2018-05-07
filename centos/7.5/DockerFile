@@ -1,0 +1,103 @@
+ARG repository
+FROM ${repository}:9.1-cudnn7-devel-centos7
+ENV LANG en_US.UTF-8
+COPY qemu-ppc64le-static /usr/bin/qemu-ppc64le-static
+ADD http://tycho.usno.navy.mil/timer.html /opt/docker/etc/timestamp
+RUN yum-config-manager --enable rhel-server-rhscl-7-rpms
+
+RUN export PATH=:/opt/conda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin >> ~/.bashrc && \ 
+
+    source ~/.bashrc && \ 
+
+    yum update -y && \ 
+
+    yum install -y \ 
+
+        git \ 
+
+        bzip2 \ 
+
+        wget \ 
+
+        make \ 
+
+        patch \ 
+ 
+        sudo \ 
+
+        tar \ 
+
+        which \ 
+
+        libXext-devel \ 
+
+        libXrender-devel \ 
+
+        libSM-devel \ 
+
+        libX11-devel \ 
+
+        mesa-libGL-devel && \ 
+
+    yum clean all 
+
+RUN yum update -y && \ 
+
+    yum install -y \ 
+
+        centos-release-scl \ 
+
+        libstdc++-static \ 
+
+    yum-utils && \ 
+
+    yum update -y 
+RUN echo 'conda ALL=NOPASSWD: /usr/bin/yum' >> /etc/sudoers
+
+RUN curl -s -L https://repo.continuum.io/miniconda/Miniconda3-4.3.27-Linux-ppc64le.sh > miniconda.sh && \ 
+
+    chmod 755 miniconda.sh && \ 
+
+    bash miniconda.sh -b -p /opt/conda && \ 
+
+    rm miniconda.sh && \ 
+
+    touch /opt/conda/conda-meta/pinned && \ 
+
+    export PATH=/opt/conda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin && \ 
+
+    conda config --set show_channel_urls True && \ 
+
+    conda config --add channels conda-forge && \ 
+
+    conda update --all --yes && \ 
+
+    conda clean -tipy 
+
+RUN export PATH="/opt/conda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin" && \ 
+
+    conda install --yes --quiet conda-build anaconda-client jinja2 setuptools && \ 
+
+    conda install --yes git && \ 
+
+    conda clean -tipsy
+
+RUN echo export PATH="/opt/conda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin" >> ~/.bashrc && \ 
+
+    source ~/.bashrc && \ 
+
+    /opt/conda/bin/conda clean -tipsy
+ADD https://github.com/tianon/gosu/releases/download/1.10/gosu-ppc64el /opt/conda/bin/gosu 
+RUN chmod +x /opt/conda/bin/gosu
+ADD https://github.com/krallin/tini/releases/download/v0.17.0/tini-ppc64el /opt/conda/bin/tini
+RUN chmod +x /opt/conda/bin/tini
+
+RUN wget https://repo.continuum.io/pkgs/main/linux-ppc64le/gcc_linux-ppc64le-7.2.0-haaebfed_24.tar.bz2 -O /root/gcc_linux-ppc64le-7.2.0-haaebfed_24.tar.bz2
+
+RUN wget https://repo.continuum.io/pkgs/main/linux-ppc64le/gfortran_linux-ppc64le-7.2.0-haaebfed_24.tar.bz2 -O /root/gfortran_linux-ppc64le-7.2.0-haaebfed_24.tar.bz2
+
+RUN /opt/conda/bin/conda install --offline --use-local /root/gcc_linux-ppc64le-7.2.0-haaebfed_24.tar.bz2
+RUN /opt/conda/bin/conda install --offline --use-local /root/gfortran_linux-ppc64le-7.2.0-haaebfed_24.tar.bz2
+
+COPY entrypoint /opt/docker/bin/entrypoint
+CMD [ "/bin/bash" ]
